@@ -1,4 +1,5 @@
 from urllib import request
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
@@ -7,6 +8,9 @@ from passwords.serializers import CreatePasswordSerializer, PasswordViewSerializ
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from accounts.permissions import IsOwner
+from cryptography.fernet import Fernet
+
+fernet = Fernet(settings.KEY)
 
 
 class CreatePassword(APIView):
@@ -33,6 +37,12 @@ class SinglePassword(APIView):
         try:
             data = Password.objects.get(id=id)
             self.check_object_permissions(self.request, data)
+            data.email=data.email.encode()
+            data.email=fernet.decrypt(data.email)
+            data.email=data.email.decode()
+            data.password=data.password.encode()
+            data.password=fernet.decrypt(data.password)
+            data.password=data.password.decode()
             return data
         except:
             return Response({'msg':"No data"},status=status.HTTP_400_BAD_REQUEST)
@@ -72,25 +82,41 @@ class PasswordView(APIView):
         try:
             user=self.request.user
             data = Password.objects.filter(owner=user)
+            serializer=self.serializer_class(data, many=True)
+            serialized_data = serializer.data
+            return Response(serialized_data, status=status.HTTP_200_OK)
         except:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer=self.serializer_class(data, many=True)
-        serialized_data = serializer.data
-        return Response(serialized_data, status=status.HTTP_200_OK)
+        
 
 class ViewPasswordOnly(APIView):
     serializer_class = SharePasswordSerializer
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, format=None):
-        serializer = self.serializer_class(data=request.data,context={'request': request})
-        if serializer.is_valid():
-            serializer.save(view=True)
-            serialized_data = serializer.data
-            return Response(serialized_data, status=status.HTTP_201_CREATED)
+    def get(self, request, id , format=None):
+        password = Password.objects.get(id=id)
+        owner = self.request.user
+        if owner == password.owner:
+            return Response({'msg':'share password'}, status=status.HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'msg':"NO permission"})
+
+
+    def post(self, request, id, format=None):
+        password = Password.objects.get(id=id)
+        owner = self.request.user
+        if owner == password.owner:
+            serializer = self.serializer_class(data=request.data,context={'request': request})
+            if serializer.is_valid():
+                serializer.save(view=True, password=password)
+                serialized_data = serializer.data
+                return Response(serialized_data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'msg':"NO permission"})
+
 
 
 
@@ -99,14 +125,27 @@ class EditPasswordOnly(APIView):
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, format=None):
-        serializer = self.serializer_class(data=request.data,context={'request': request})
-        if serializer.is_valid():
-            serializer.save(edit=True)
-            serialized_data = serializer.data
-            return Response(serialized_data, status=status.HTTP_201_CREATED)
+    def get(self, request, id , format=None):
+        password = Password.objects.get(id=id)
+        owner = self.request.user
+        if owner == password.owner:
+            return Response({'msg':'share password'}, status=status.HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'msg':"NO permission"})
+
+    def post(self, request, id, format=None):
+        password = Password.objects.get(id=id)
+        owner = self.request.user
+        if owner == password.owner:
+            serializer = self.serializer_class(data=request.data,context={'request': request})
+            if serializer.is_valid():
+                serializer.save(edit=True, password=password)
+                serialized_data = serializer.data
+                return Response(serialized_data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'msg':"NO permission"})
 
 
 
@@ -124,8 +163,15 @@ class SharedViewSinglePassword(APIView):
             share = SharePassword.objects.filter(user=user, view=True, password=datas)
             if share:
                 for i in share:
-                    passs= Password.objects.get(id=i.password.id)
-                    serializer = self.serializer_class1(passs)
+                    data= Password.objects.get(id=i.password.id)
+                    data.email=data.email.encode()
+                    data.email=fernet.decrypt(data.email)
+                    data.email=data.email.decode()
+                    data.password=data.password.encode()
+                    data.password=fernet.decrypt(data.password)
+                    data.password=data.password.decode()
+                    # data.save()
+                    serializer = self.serializer_class1(data)
                     serialized_data = serializer.data
                     return Response(serialized_data, status=status.HTTP_200_OK)
             else:
@@ -148,8 +194,14 @@ class SharedEditSinglePassword(APIView):
             share = SharePassword.objects.filter(user=user, edit=True, password=datas)
             if share:
                 for i in share:
-                    passs= Password.objects.get(id=i.password.id)
-                    serializer = self.serializer_class(passs)
+                    data= Password.objects.get(id=i.password.id)
+                    data.email=data.email.encode()
+                    data.email=fernet.decrypt(data.email)
+                    data.email=data.email.decode()
+                    data.password=data.password.encode()
+                    data.password=fernet.decrypt(data.password)
+                    data.password=data.password.decode()
+                    serializer = self.serializer_class(data)
                     serialized_data = serializer.data
                     return Response(serialized_data, status=status.HTTP_200_OK)
             else:
