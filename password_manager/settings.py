@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'accounts',
     'passwords',
+    'organization',
 ]
 
 MIDDLEWARE = [
@@ -142,4 +143,5 @@ REST_FRAMEWORK = {
     ]
 }
 
-KEY = os.getenv('KEY')
+# KEY = os.getenv('KEY')
+KEY = b'piJZv7Goi_eQnllUOrrVhO1OJNzNMrTXb2gjcq_AWwc='
