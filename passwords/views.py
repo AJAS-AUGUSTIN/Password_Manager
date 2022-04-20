@@ -192,6 +192,7 @@ class SharedEditSinglePassword(APIView):
             datas= data.id
             user=self.request.user.id
             share = SharePassword.objects.filter(user=user, edit=True, password=datas)
+            print("Shareeeeeeeee",share)
             if share:
                 for i in share:
                     data= Password.objects.get(id=i.password.id)
@@ -208,6 +209,7 @@ class SharedEditSinglePassword(APIView):
                 return Response({'msg':"No Permission"},status=status.HTTP_404_NOT_FOUND)
 
         except:
+            print("Exceptttt")
             return Response({'msg':"No Permission"},status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, id, format=None):
